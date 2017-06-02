@@ -1,0 +1,10 @@
+﻿{
+  "articles": [
+    {
+      "author": "BBC News",
+      "title": "Title manchester",
+      "description": "Text",
+      "publishedAt": "2017-06-02T14:52:59+00:00"
+    }
+  ]
+}
