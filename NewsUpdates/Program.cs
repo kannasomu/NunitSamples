@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RestSharp;
 
@@ -15,7 +14,7 @@ namespace NewsUpdates
             var topicToSearchFor = args[0];
             Console.WriteLine($"Latest news on {topicToSearchFor}");
 
-            var newsProvider = new NewsProvider(new RestClient(new Uri(@"https://newsapi.org/v1/articles?source=bbc-news&sortBy=top&apiKey=1233")));
+            var newsProvider = new NewsProvider(new RestClient(new Uri(@"https://newsapi.org/v1/articles")));
             var newsItem = newsProvider.GetLatestNewItem(topicToSearchFor);
             
             Console.WriteLine($"Title: {newsItem.Title}");
@@ -41,19 +40,34 @@ namespace NewsUpdates
         }
         public NewsItem GetLatestNewItem(string topicName)
         {
-            var response = _restClient.Execute(new RestRequest());
+            var newsItem = TryGetNewsItemsFromSource(topicName, "bbc-news");
+            return newsItem ?? TryGetNewsItemsFromSource(topicName, "the-telegraph");
+        }
+
+        private NewsItem TryGetNewsItemsFromSource(string topicName, string source)
+        {
+            var req = new RestRequest();
+            AddRequestParametersWithSource(req, source);
+
+            var response = _restClient.Execute(req);
             var news = JsonConvert.DeserializeObject<News>(response.Content);
 
-            if (news.Articles.FirstOrDefault(x => x.Title.Contains(topicName)) != null)
+            if (news.Articles.FirstOrDefault(x => x.Title.Contains(topicName)) == null) return null;
             {
-                return new NewsItem()
+                return new NewsItem
                 {
                     Date = news.Articles[0].PublishedAt,
                     Title = news.Articles[0].Title,
                     Text = news.Articles[0].Description
                 };
             }
-            return null;
+        }
+
+        private static void AddRequestParametersWithSource(RestRequest req, string source)
+        {
+            req.AddParameter("source", source);
+            req.AddParameter("sortBy", "top");
+            req.AddParameter("apiKey", ConfigurationManager.AppSettings["ApiKey"]);
         }
     }
 
@@ -74,5 +88,4 @@ namespace NewsUpdates
         public string SortBy { get; set; }
         public List<Article> Articles { get; set; }
     }
-
 }
